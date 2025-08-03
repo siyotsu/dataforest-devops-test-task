@@ -1,0 +1,47 @@
+services:
+  frontend:
+    image: nginx:1.29-alpine
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./application/frontend:/usr/share/nginx/html:ro
+    networks:
+      - app-network
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+  backend:
+    image: siyotsu/backend-app:3.0.0
+    ports:
+      - "3000:3000"
+    networks:
+      - app-network
+    depends_on:
+      - db
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 10s
+      retries: 3
+
+  db:
+    image: mongo:8
+    ports:
+      - "27017:27017"
+    networks:
+      - app-network
+    volumes:
+      - db_data:/data/db
+    restart: unless-stopped
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/test --quiet
+      interval: 10s
+      retries: 5
+
+volumes:
+  db_data:
+
+networks:
+  app-network:
